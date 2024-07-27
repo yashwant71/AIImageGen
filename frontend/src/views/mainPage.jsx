@@ -2,16 +2,19 @@ import { useEffect, useState } from "react";
 import { Client } from "@gradio/client";
 import { useDispatch, useSelector } from "react-redux";
 import { setElements } from "../state/reducer/formpayload";
-import { ConvertToTitleCase } from "../utils/convertToTitleCase";
+import { ConvertToTitleCase, FormatPayload } from "../utils/usefulfunctions";
+// import axios from "axios";
+// import apiConfig from "../services/apiconfig";
 /* eslint-disable react/prop-types */
 const MainPage = () => {
   const submissionQueueLimit = 2;
-  const [api, setApi] = useState("prithivMLmods/IMAGINEO-4K");
+  const [selectedApi, setselectedApi] = useState("prithivMLmods/IMAGINEO-4K");
   // eslint-disable-next-line no-unused-vars
   const [apis, setApis] = useState([
     "prithivMLmods/IMAGINEO-4K",
     "mukaist/Midjourney",
     "mukaist/DALLE-4K",
+    "Boboiazumi/animagine-xl-3.1",
     // "cagliostrolab/animagine-xl-3.1",// uses string[] in payload
     // "gokaygokay/PonyRealism" // need different payloads
     // "prithivMLmods/EPIC-REALISM" // need string[] in payload check from network
@@ -23,21 +26,24 @@ const MainPage = () => {
   const [loading, setLoading] = useState(false);
   const [ShowAdvanceOptions, setShowAdvanceOptions] = useState(false);
   const [result, setResult] = useState([]);
-  const elements = useSelector((state) => state.formpayload);
-  // console.log(elements); // {formPayload: {...}}
+  const { formPayload } = useSelector((state) => state.formpayload);
+  // console.log(formPayload); //  {...}
 
   const [submissionQueue, setSubmissionQueue] = useState([]);
-  const processSubmission = async (formPayload) => {
+  const processSubmission = async (formPayloadData) => {
     setLoading(true);
     try {
-      const client = await Client.connect(api);
-      const response = await client.predict("/run", { ...formPayload });
+      console.log("payloadtoapi", formPayloadData);
+      const client = await Client.connect(selectedApi);
+      const response = await client.predict("/run", { ...formPayloadData });
       if (response.data[0][0].image.url) {
         setResult((prevResult) => [
           response.data[0][0].image.url,
           ...prevResult,
         ]);
       }
+      // const response = await apiConfig.post("/run", formPayload);
+      console.log(response);
     } catch (error) {
       alert(error.message);
       console.error(error.message);
@@ -50,11 +56,15 @@ const MainPage = () => {
     e.preventDefault();
 
     if (submissionQueue.length >= submissionQueueLimit) {
-      alert("Daddy chill ! take a breather.");
+      alert("Daddy chiill ! take a breather.");
       return;
     }
-
-    setSubmissionQueue((prevQueue) => [...prevQueue, elements.formPayload]);
+    // Format the payload before adding to the submission queue
+    const formattedPayload = FormatPayload(
+      formPayload[selectedApi].payload,
+      formPayload[selectedApi].type
+    );
+    setSubmissionQueue((prevQueue) => [...prevQueue, formattedPayload]);
 
     // If not already processing, start processing the queue
     if (!loading && submissionQueue.length > 0) {
@@ -78,12 +88,16 @@ const MainPage = () => {
     <div className="w-[100vw] h-[100vh] overflow-x-hidden">
       <div className="mt-4 md:flex">
         <form onSubmit={handleSubmit} className="w-[300px] p-4">
-          <div className="mb-2">
+          <button type="submit" className="w-full mb-3">
+            Generate Image
+          </button>
+          <div className="mb-2 w-full">
             <div className=" text-[12px]">API</div>
             <select
+              className="w-full"
               id="api"
-              value={api}
-              onChange={(e) => setApi(e.target.value)}
+              value={selectedApi}
+              onChange={(e) => setselectedApi(e.target.value)}
             >
               <option disabled>Select api</option>
               {apis.map((api) => (
@@ -94,18 +108,7 @@ const MainPage = () => {
             </select>
           </div>
 
-          <Custominputs
-            type="text"
-            name="prompt"
-            isTextArea={true}
-            isRequired={true}
-          />
-          <Custominputs
-            type="text"
-            name="negative_prompt"
-            isTextArea={true}
-            isRequired={false}
-          />
+          <Custominputs selectedApi={selectedApi} />
           <div
             className="cursor-pointer mb-2 underline"
             onClick={() => setShowAdvanceOptions(!ShowAdvanceOptions)}
@@ -117,24 +120,7 @@ const MainPage = () => {
           {ShowAdvanceOptions ? (
             <>
               {" "}
-              <Custominputs
-                type="number"
-                name="width"
-                isTextArea={false}
-                isRequired={false}
-              />
-              <Custominputs
-                type="number"
-                name="height"
-                isTextArea={false}
-                isRequired={false}
-              />
-              <Custominputs
-                type="number"
-                name="guidance_scale"
-                isTextArea={false}
-                isRequired={false}
-              />
+              <Custominputs selectedApi={selectedApi} showAdvancedOpt={true} />
             </>
           ) : (
             ""
@@ -142,7 +128,6 @@ const MainPage = () => {
           {/* <button type="submit" disabled={loading}>
             {loading ? "Generating..." : "Generate Image"}
           </button> */}
-          <button type="submit">Generate Image</button>
         </form>
         <ShowImage
           result={result}
@@ -154,45 +139,142 @@ const MainPage = () => {
   );
 };
 
-function Custominputs({ type, name, isTextArea, isRequired }) {
-  const elements = useSelector((state) => state.formpayload);
+function Custominputs({ selectedApi, showAdvancedOpt = false }) {
+  const { formPayload } = useSelector((state) => state.formpayload);
   // console.log(elements); // {formPayload: {...}}
   const dispatch = useDispatch();
 
   const handleFormPayloadChange = (e) => {
-    const { name, value, type } = e.target;
+    const { name, value, type, checked } = e.target;
     var tempval = value;
-    if (type === "number") {
+    if (type === "number" || type === "slider") {
       tempval = parseInt(value);
+    } else if (type === "checkbox") {
+      tempval = checked;
     }
-    dispatch(setElements({ ...elements.formPayload, [name]: tempval }));
+    // updating selected api's payload prop
+    dispatch(
+      setElements({
+        ...formPayload,
+        [selectedApi]: {
+          ...formPayload[selectedApi],
+          payload: {
+            ...formPayload[selectedApi].payload,
+            [name]: {
+              ...formPayload[selectedApi].payload[name],
+              value: tempval,
+            },
+          },
+        },
+      })
+    );
   };
 
   return (
-    <div className="mb-2">
-      <div className=" text-[12px]">{ConvertToTitleCase(name)}</div>
-      {!isTextArea ? (
-        <input
-          className="w-[250px]"
-          type={type}
-          name={name}
-          value={elements.formPayload[name]}
-          onChange={handleFormPayloadChange}
-          placeholder={ConvertToTitleCase(name)}
-          required={isRequired}
-        />
-      ) : (
-        <textarea
-          className="w-[250px]"
-          type={type}
-          name={name}
-          value={elements.formPayload[name]}
-          onChange={handleFormPayloadChange}
-          placeholder={ConvertToTitleCase(name)}
-          required={isRequired}
-        />
-      )}
-    </div>
+    <>
+      {Object.entries(formPayload[selectedApi]?.payload).map(([key, value]) => {
+        // if showAdvancedOpt false , then show non advanced ones
+        if (
+          (showAdvancedOpt ? value.isAdvanceoption : !value.isAdvanceoption) &&
+          !value.hide
+        ) {
+          return (
+            <div key={key}>
+              <div className="mb-3 w-full">
+                <div className="text-gray-400 text-[12px]">
+                  {ConvertToTitleCase(key)}
+                </div>
+                {value.type === "text" || value.type === "number" ? (
+                  <input
+                    className="w-full"
+                    type={value.type}
+                    name={key}
+                    value={value.value}
+                    onChange={handleFormPayloadChange}
+                    placeholder={ConvertToTitleCase(key)}
+                    required={value.isRequired}
+                  />
+                ) : value.type === "textarea" ? (
+                  <textarea
+                    className="w-full"
+                    type={value.type}
+                    name={name}
+                    value={value.value}
+                    onChange={handleFormPayloadChange}
+                    placeholder={ConvertToTitleCase(key)}
+                    required={value.isRequired}
+                  />
+                ) : value.type === "checkbox" ? (
+                  <input
+                    type="checkbox"
+                    name={key}
+                    checked={value.value}
+                    onChange={handleFormPayloadChange}
+                  />
+                ) : value.type === "dropdown" ? (
+                  <select
+                    className="w-full"
+                    name={key}
+                    value={value.value}
+                    onChange={handleFormPayloadChange}
+                  >
+                    {value?.options?.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                ) : value.type === "radio" ? (
+                  <div className="w-full">
+                    {value.options.map((option, index) => (
+                      <label key={index} className="pr-2 py-1">
+                        <input
+                          type="radio"
+                          name={key}
+                          value={option}
+                          checked={value.value === option}
+                          onChange={handleFormPayloadChange}
+                        />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                ) : value.type === "slider" ? (
+                  <div className="flex items-center justify-between w-full">
+                    <input
+                      className="w-full"
+                      type="range"
+                      name={key}
+                      value={value.value}
+                      onChange={handleFormPayloadChange}
+                      min={value.min}
+                      max={value.max}
+                      step={value.step || 1}
+                      required={value.isRequired}
+                    />
+                    <span className="ml-2">
+                      {parseFloat(value.value).toFixed(2)}
+                    </span>
+                  </div>
+                ) : value.type === "number" ? (
+                  <input
+                    type="number"
+                    name={key}
+                    value={value.value}
+                    onChange={handleFormPayloadChange}
+                    min={value.min}
+                    max={value.max}
+                    required={value.isRequired}
+                  />
+                ) : (
+                  ""
+                )}
+              </div>
+            </div>
+          );
+        }
+      })}
+    </>
   );
 }
 
