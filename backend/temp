@@ -1,3 +1,6 @@
 https://www.freddyboulton.com/blog/gradio-curl
 
 nodemon --inspect ./src/server.js
+http://pubproxy.com/api/proxy
+
+https://api.proxyscrape.com/v3/free-proxy-list/get?request=displayproxies&proxy_format=protocolipport&format=text
