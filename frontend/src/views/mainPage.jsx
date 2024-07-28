@@ -10,6 +10,8 @@ import {
 import apiConfig from "../services/apiconfig";
 import { fnIndexAndTriggerIdMapper } from "../data";
 import { EachInputs } from "../components/Inputs";
+import { saveAs } from "file-saver";
+
 /* eslint-disable react/prop-types */
 const localStoragName = "Aigradimages";
 const MainPage = () => {
@@ -24,7 +26,7 @@ const MainPage = () => {
     "KingNish/SDXL-Flash",
     "prodia/sdxl-stable-diffusion-xl",
     "Akimitsujiro/Stable-Diffusion-XL",
-    "prithivMLmods/EPIC-REALISM"
+    "prithivMLmods/EPIC-REALISM",
     // "cagliostrolab/animagine-xl-3.1",
     // "gokaygokay/PonyRealism"
     // "prithivMLmods/Text-To-Image"
@@ -291,6 +293,11 @@ function ShowImage({ imageWidth, result, setResult }) {
     const message = `API: ${selectedApi}\nPrompt: ${prompt}\nNegative Prompt: ${negative_prompt}`;
     alert(message);
   }
+  const handleDownloadImage = (image) => {
+    const url = new URL(image.url);
+    const fileName = url.pathname.split("/").pop();
+    saveAs(image.url, fileName);
+  };
   return (
     <>
       <div className="flex flex-wrap items-start justify-start">
@@ -298,7 +305,12 @@ function ShowImage({ imageWidth, result, setResult }) {
           <>
             {result.map((image) => (
               <div key={image.url} className="m-1 relative group h-fit">
-                <img src={image.url} alt="Not found" width={imageWidth} />
+                <img
+                  src={image.url}
+                  alt="Not found"
+                  width={imageWidth}
+                  className="rounded"
+                />
                 <div className="absolute top-0 right-0 m-1 transition duration-300 ease-in-out  opacity-0 group-hover:opacity-100 ">
                   <button
                     onClick={() => handleDeleteImage(image.url)}
@@ -308,9 +320,28 @@ function ShowImage({ imageWidth, result, setResult }) {
                   </button>
                   <button
                     onClick={() => showImageInfo(image)}
-                    className="rounded flex items-center justify-center w-6 h-6 p-0 m-0 bg-[#1f1f1f]"
+                    className="rounded flex items-center justify-center w-6 h-6 p-0 m-0 bg-[#1f1f1f] mb-2"
                   >
                     i
+                  </button>
+                  <button
+                    onClick={() => handleDownloadImage(image)}
+                    className="rounded flex items-center justify-center w-6 h-6 p-0 m-0 bg-[#1f1f1f] mb-2"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
+                    </svg>
                   </button>
                 </div>
               </div>

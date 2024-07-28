@@ -1,5 +1,5 @@
 {
-    "name": "testyt",
+    "name": "ai-imagegens-yy",
     "version": "1.0.0",
     "scripts": {
         "start": "cp -r frontend/dist/* backend/public/ && cd backend && node src/server.js",
