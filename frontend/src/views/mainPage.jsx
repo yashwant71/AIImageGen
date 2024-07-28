@@ -15,7 +15,7 @@ import { saveAs } from "file-saver";
 /* eslint-disable react/prop-types */
 const localStoragName = "Aigradimages";
 const MainPage = () => {
-  const submissionQueueLimit = 200;
+  const submissionQueueLimit = 100;
   const [selectedApi, setselectedApi] = useState("mukaist/Midjourney");
   // eslint-disable-next-line no-unused-vars
   const [apis, setApis] = useState([
@@ -78,7 +78,7 @@ const MainPage = () => {
         // save in state
         setResult((prevResult) => [imageObj, ...prevResult]);
       } else {
-        alert("some error occured, Try different Api");
+        alert("some error occured, Try with different Api!!");
       }
     } catch (error) {
       alert(error.message);
@@ -133,7 +133,7 @@ const MainPage = () => {
             onSubmit={handleSubmit}
             className=" p-4 py-0 my-1 md:pb-10 md:w-[25%] md:h-screen md:overflow-y-auto"
           >
-            <button type="submit" className="w-full mb-3">
+            <button type="submit" className="w-full mb-3 text-black bg-white">
               <span>
                 {loading
                   ? "Generating Image (" + (submissionQueue.length + 1) + ")..."
