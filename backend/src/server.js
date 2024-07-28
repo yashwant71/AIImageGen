@@ -56,7 +56,7 @@ app.post("/api/gradio", async (req, res) => {
         } else {
           res.status(500).json({ message: "not found the url " });
         }
-        console.log("eveedata", eventData?.output?.data?.[0]?.[0]);
+        console.log("eveedata", eventData);
       }
     };
 
