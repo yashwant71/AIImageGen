@@ -24,9 +24,9 @@ const MainPage = () => {
     "KingNish/SDXL-Flash",
     "prodia/sdxl-stable-diffusion-xl",
     "Akimitsujiro/Stable-Diffusion-XL",
+    "prithivMLmods/EPIC-REALISM"
     // "cagliostrolab/animagine-xl-3.1",
     // "gokaygokay/PonyRealism"
-    // "prithivMLmods/EPIC-REALISM"
     // "prithivMLmods/Text-To-Image"
     // "PIXAR-4K"
     // "prithivMLmods/STABLE-HAMSTER"
@@ -64,11 +64,17 @@ const MainPage = () => {
       });
       if (data) {
         // save in local storage
+        const imageObj = {
+          selectedApi: selectedApi,
+          url: data,
+          prompt: formPayloadData[0],
+          negative_prompt: formPayloadData[1],
+        };
         const images = JSON.parse(localStorage.getItem(localStoragName)) || [];
-        images.unshift(data);
+        images.unshift(imageObj); // at first position
         localStorage.setItem(localStoragName, JSON.stringify(images));
         // save in state
-        setResult((prevResult) => [data, ...prevResult]);
+        setResult((prevResult) => [imageObj, ...prevResult]);
       } else {
         alert("some error occured, Try different Api");
       }
@@ -214,7 +220,6 @@ function Custominputs({ selectedApi, showAdvancedOpt = false }) {
 
   const handleFormPayloadChange = (e) => {
     const { name, value, type, checked } = e.target;
-    console.log(e.target.value);
     var tempval = value;
     if (type === "number" || type === "slider") {
       tempval = parseInt(value);
@@ -273,27 +278,41 @@ function ShowImage({ imageWidth, result, setResult }) {
   // const width = 300;
   const handleDeleteImage = (image) => {
     const images = JSON.parse(localStorage.getItem(localStoragName)) || [];
-    const index = images.indexOf(image);
+    const index = images.findIndex((obj) => obj.url === image);
     if (index !== -1) {
       images.splice(index, 1);
       localStorage.setItem(localStoragName, JSON.stringify(images));
       setResult(images);
     }
   };
+
+  function showImageInfo(image) {
+    const { prompt, negative_prompt, selectedApi } = image;
+    const message = `API: ${selectedApi}\nPrompt: ${prompt}\nNegative Prompt: ${negative_prompt}`;
+    alert(message);
+  }
   return (
     <>
       <div className="flex flex-wrap items-start justify-start">
         {result?.length ? (
           <>
-            {result.map((imageUrl) => (
-              <div key={imageUrl} className="m-1 relative group h-fit">
-                <img src={imageUrl} alt="Not found" width={imageWidth} />
-                <button
-                  className="absolute top-0 right-0 py-1 px-2.5 m-1 transition duration-300 ease-in-out bg-[#1f1f1f] opacity-0 group-hover:opacity-100 rounded flex items-center justify-center"
-                  onClick={() => handleDeleteImage(imageUrl)}
-                >
-                  x
-                </button>
+            {result.map((image) => (
+              <div key={image.url} className="m-1 relative group h-fit">
+                <img src={image.url} alt="Not found" width={imageWidth} />
+                <div className="absolute top-0 right-0 m-1 transition duration-300 ease-in-out  opacity-0 group-hover:opacity-100 ">
+                  <button
+                    onClick={() => handleDeleteImage(image.url)}
+                    className="rounded flex items-center justify-center w-6 h-6 p-0 m-0 bg-[#1f1f1f] mb-2"
+                  >
+                    x
+                  </button>
+                  <button
+                    onClick={() => showImageInfo(image)}
+                    className="rounded flex items-center justify-center w-6 h-6 p-0 m-0 bg-[#1f1f1f]"
+                  >
+                    i
+                  </button>
+                </div>
               </div>
             ))}
           </>

@@ -27,6 +27,10 @@ export const fnIndexAndTriggerIdMapper = {
     fn_index: 4,
     trigger_id: 48,
   },
+  "prithivMLmods/EPIC-REALISM": {
+    fn_index: 2,
+    trigger_id: 5,
+  },
 };
 
 //"Aigradimages"

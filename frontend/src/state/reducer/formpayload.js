@@ -670,6 +670,71 @@ const initialState = {
         },
       },
     },
+    "prithivMLmods/EPIC-REALISM": {
+      payloadType: "string",
+      payload: {
+        prompt: {
+          isRequired: true,
+          value: "",
+          type: "text",
+        },
+        negative_prompt: {
+          value: "",
+          type: "textarea",
+        },
+        unknownParam: {
+          type: "unknown",
+          value: true,
+          hide: true,
+        },
+        seed: {
+          isAdvanceoption: true,
+          value: 0,
+          type: "number",
+          isRandomize: true,
+          hide: true,
+        },
+        width: {
+          value: 1024,
+          type: "slider",
+          min: 512,
+          max: 4096,
+        },
+        height: {
+          value: 1024,
+          type: "slider",
+          min: 512,
+          max: 4096,
+        },
+        unknownParam2: {
+          type: "unknown",
+          value: 3,
+          hide: true,
+        },
+        unknownParam3: {
+          type: "unknown",
+          value: true,
+          hide: true,
+        },
+        aspect_ratio_selector: {
+          value: "3840 x 2160",
+          hide: true,
+          options: [
+            "3840 x 2160",
+            "1152 x 896",
+            "896 x 1152",
+            "1216 x 832",
+            "832 x 1216",
+            "1344 x 768",
+            "768 x 1344",
+            "1536 x 640",
+            "640 x 1536",
+            "Custom",
+          ],
+          type: "radio",
+        },
+      },
+    },
   },
 };
 
