@@ -1,0 +1,3 @@
+https://www.freddyboulton.com/blog/gradio-curl
+
+nodemon --inspect ./src/server.js

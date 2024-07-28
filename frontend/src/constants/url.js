@@ -1,3 +1,5 @@
-// import { environment } from "src/environments/environment";
+console.log(import.meta.env);
 
-// export const BASE_URL = environment.production ? "" : "http://localhost:5000";
+// export const BASE_URL = import.meta.env.PROD ? "/" : "http://localhost:3000";
+
+export const BASE_URL = "/api";

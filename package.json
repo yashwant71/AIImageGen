@@ -1,0 +1,9 @@
+{
+    "name": "testyt",
+    "version": "1.0.0",
+    "scripts": {
+        "start": "cp -r frontend/dist/* backend/public/ && cd backend && node src/server.js",
+        "prebuild": "cd backend && npm run build",
+        "build": "cd frontend && npm install && npm run build"
+    }
+}

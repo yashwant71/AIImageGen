@@ -1,49 +1,77 @@
-import { useEffect, useState } from "react";
-import { Client } from "@gradio/client";
+import { Fragment, useEffect, useState } from "react";
+// import { Client } from "@gradio/client";
 import { useDispatch, useSelector } from "react-redux";
 import { setElements } from "../state/reducer/formpayload";
-import { ConvertToTitleCase, FormatPayload } from "../utils/usefulfunctions";
+import {
+  convertApiNameForUrlFormat,
+  FormatPayload,
+} from "../utils/usefulfunctions";
 // import axios from "axios";
-// import apiConfig from "../services/apiconfig";
+import apiConfig from "../services/apiconfig";
+import { fnIndexAndTriggerIdMapper } from "../data";
+import { EachInputs } from "../components/Inputs";
 /* eslint-disable react/prop-types */
+const localStoragName = "Aigradimages";
 const MainPage = () => {
-  const submissionQueueLimit = 2;
-  const [selectedApi, setselectedApi] = useState("prithivMLmods/IMAGINEO-4K");
+  const submissionQueueLimit = 200;
+  const [selectedApi, setselectedApi] = useState("mukaist/Midjourney");
   // eslint-disable-next-line no-unused-vars
   const [apis, setApis] = useState([
-    "prithivMLmods/IMAGINEO-4K",
     "mukaist/Midjourney",
+    "prithivMLmods/IMAGINEO-4K",
     "mukaist/DALLE-4K",
     "Boboiazumi/animagine-xl-3.1",
-    // "cagliostrolab/animagine-xl-3.1",// uses string[] in payload
-    // "gokaygokay/PonyRealism" // need different payloads
-    // "prithivMLmods/EPIC-REALISM" // need string[] in payload check from network
-    // "prithivMLmods/Text-To-Image" // need string[] in payload check from network
-    // "PIXAR-4K" // need string[] in payload check from network
-    // "prithivMLmods/STABLE-HAMSTER" // need string[] in payload check from network
-    // "multimodalart/stable-cascade" // need string[] in payload check from network
+    "KingNish/SDXL-Flash",
+    "prodia/sdxl-stable-diffusion-xl",
+    "Akimitsujiro/Stable-Diffusion-XL",
+    // "cagliostrolab/animagine-xl-3.1",
+    // "gokaygokay/PonyRealism"
+    // "prithivMLmods/EPIC-REALISM"
+    // "prithivMLmods/Text-To-Image"
+    // "PIXAR-4K"
+    // "prithivMLmods/STABLE-HAMSTER"
+    // "multimodalart/stable-cascade"
   ]);
-  const [loading, setLoading] = useState(false);
-  const [ShowAdvanceOptions, setShowAdvanceOptions] = useState(false);
-  const [result, setResult] = useState([]);
-  const { formPayload } = useSelector((state) => state.formpayload);
-  // console.log(formPayload); //  {...}
 
+  const [loading, setLoading] = useState(false);
+  const [imageWidth, setimageWidth] = useState(150);
+  const [ShowAdvanceOptions, setShowAdvanceOptions] = useState(false);
+  const [result, setResult] = useState(() => {
+    const images = JSON.parse(localStorage.getItem(localStoragName)) || [];
+    return images;
+  });
+  const { formPayload } = useSelector((state) => state.formpayload);
   const [submissionQueue, setSubmissionQueue] = useState([]);
+
   const processSubmission = async (formPayloadData) => {
     setLoading(true);
     try {
-      console.log("payloadtoapi", formPayloadData);
-      const client = await Client.connect(selectedApi);
-      const response = await client.predict("/run", { ...formPayloadData });
-      if (response.data[0][0].image.url) {
-        setResult((prevResult) => [
-          response.data[0][0].image.url,
-          ...prevResult,
-        ]);
+      // console.log("payloadtoapi", formPayloadData);
+      // const client = await Client.connect(selectedApi);
+      // const response = await client.predict("/run", { ...formPayloadData });
+      // if (response.data[0][0].image.url) {
+      //   setResult((prevResult) => [
+      //     response.data[0][0].image.url,
+
+      //     ...prevResult,
+      //   ]);
+      // }
+      const { data } = await apiConfig.post("/gradio", {
+        payload: formPayloadData,
+        selectedApi: convertApiNameForUrlFormat(selectedApi),
+        trigger_id: fnIndexAndTriggerIdMapper[selectedApi].trigger_id,
+        fn_index: fnIndexAndTriggerIdMapper[selectedApi].fn_index,
+      });
+      if (data) {
+        // save in local storage
+        const images = JSON.parse(localStorage.getItem(localStoragName)) || [];
+        images.unshift(data);
+        localStorage.setItem(localStoragName, JSON.stringify(images));
+        // save in state
+        setResult((prevResult) => [data, ...prevResult]);
+      } else {
+        alert("some error occured, Try different Api");
       }
-      // const response = await apiConfig.post("/run", formPayload);
-      console.log(response);
     } catch (error) {
       alert(error.message);
       console.error(error.message);
@@ -62,7 +90,7 @@ const MainPage = () => {
     // Format the payload before adding to the submission queue
     const formattedPayload = FormatPayload(
       formPayload[selectedApi].payload,
-      formPayload[selectedApi].type
+      formPayload[selectedApi].payloadType
     );
     setSubmissionQueue((prevQueue) => [...prevQueue, formattedPayload]);
 
@@ -83,57 +111,96 @@ const MainPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, submissionQueue]);
-
   return (
-    <div className="w-[100vw] h-[100vh] overflow-x-hidden">
-      <div className="mt-4 md:flex">
-        <form onSubmit={handleSubmit} className="w-[300px] p-4">
-          <button type="submit" className="w-full mb-3">
-            Generate Image
-          </button>
-          <div className="mb-2 w-full">
-            <div className=" text-[12px]">API</div>
-            <select
-              className="w-full"
-              id="api"
-              value={selectedApi}
-              onChange={(e) => setselectedApi(e.target.value)}
-            >
-              <option disabled>Select api</option>
-              {apis.map((api) => (
-                <option key={api} value={api}>
-                  {api}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <Custominputs selectedApi={selectedApi} />
-          <div
-            className="cursor-pointer mb-2 underline"
-            onClick={() => setShowAdvanceOptions(!ShowAdvanceOptions)}
+    <div className="w-[100vw] h-[100vh] overflow-x-hidden md:overflow-y-hidden text-[12px]">
+      <div className=" min-h-screen">
+        <div className="flex w-full items-center justify-center text-[10px] text-gray-400">
+          Images are stored locally on your browser. We do not store any images
+          on our servers.
+        </div>
+        {/* main page container */}
+        <div className="flex flex-col md:flex-row">
+          {/* left side */}
+          <form
+            onSubmit={handleSubmit}
+            className=" p-4 py-0 my-1 md:pb-10 md:w-[25%] md:h-screen md:overflow-y-auto"
           >
-            {ShowAdvanceOptions
-              ? "hide advanced options"
-              : "show advanced options"}
+            <button type="submit" className="w-full mb-3">
+              <span>
+                {loading
+                  ? "Generating Image (" + (submissionQueue.length + 1) + ")..."
+                  : "Generate Image"}
+              </span>
+            </button>
+            <div className="pb-3 w-full border-0 border-b border-solid border-gray-600 mb-1">
+              <div className=" text-[12px]">API</div>
+              <select
+                className="w-full px-2 py-1"
+                id="api"
+                value={selectedApi}
+                onChange={(e) => setselectedApi(e.target.value)}
+              >
+                <option disabled>Select api</option>
+                {apis.map((api) => (
+                  <option key={api} value={api}>
+                    {api}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <Custominputs selectedApi={selectedApi} />
+            <div
+              className="cursor-pointer mb-2 underline"
+              onClick={() => setShowAdvanceOptions(!ShowAdvanceOptions)}
+            >
+              {ShowAdvanceOptions
+                ? "hide advanced options"
+                : "show advanced options"}
+            </div>
+            {ShowAdvanceOptions ? (
+              <>
+                {" "}
+                <Custominputs
+                  selectedApi={selectedApi}
+                  showAdvancedOpt={true}
+                />
+              </>
+            ) : (
+              ""
+            )}
+            {/* <button type="submit" disabled={loading}>
+              {loading ? "Generating..." : "Generate Image"}
+            </button> */}
+          </form>
+          {/* right side  */}
+          <div className="md:w-[80%] ">
+            {/* header div */}
+            <div className="flex items-center justify-end w-full mx-0 md:mx-2 border-0 border-t border-solid border-gray-500 md:border-0 py-2 md:py-0">
+              <div>tile size</div>
+              <input
+                className="md:w-[100px]  mx-2"
+                type="range"
+                name={"imgWidth"}
+                value={imageWidth / 50}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  setimageWidth(value * 50);
+                }}
+                min={1}
+                max={10}
+                step={1}
+              />
+            </div>
+            <div className="w-full md:h-screen md:overflow-y-auto">
+              <ShowImage
+                imageWidth={imageWidth}
+                result={result}
+                setResult={setResult}
+              />
+            </div>
           </div>
-          {ShowAdvanceOptions ? (
-            <>
-              {" "}
-              <Custominputs selectedApi={selectedApi} showAdvancedOpt={true} />
-            </>
-          ) : (
-            ""
-          )}
-          {/* <button type="submit" disabled={loading}>
-            {loading ? "Generating..." : "Generate Image"}
-          </button> */}
-        </form>
-        <ShowImage
-          result={result}
-          loading={loading}
-          submissionQueue={submissionQueue}
-        />
+        </div>
       </div>
     </div>
   );
@@ -141,11 +208,13 @@ const MainPage = () => {
 
 function Custominputs({ selectedApi, showAdvancedOpt = false }) {
   const { formPayload } = useSelector((state) => state.formpayload);
+
   // console.log(elements); // {formPayload: {...}}
   const dispatch = useDispatch();
 
   const handleFormPayloadChange = (e) => {
     const { name, value, type, checked } = e.target;
+    console.log(e.target.value);
     var tempval = value;
     if (type === "number" || type === "slider") {
       tempval = parseInt(value);
@@ -172,137 +241,64 @@ function Custominputs({ selectedApi, showAdvancedOpt = false }) {
 
   return (
     <>
-      {Object.entries(formPayload[selectedApi]?.payload).map(([key, value]) => {
+      {Object.entries(formPayload[selectedApi]?.payload).map(([key, value]) => (
         // if showAdvancedOpt false , then show non advanced ones
-        if (
-          (showAdvancedOpt ? value.isAdvanceoption : !value.isAdvanceoption) &&
-          !value.hide
-        ) {
-          return (
-            <div key={key}>
-              <div className="mb-3 w-full">
-                <div className="text-gray-400 text-[12px]">
-                  {ConvertToTitleCase(key)}
-                </div>
-                {value.type === "text" || value.type === "number" ? (
-                  <input
-                    className="w-full"
-                    type={value.type}
-                    name={key}
-                    value={value.value}
-                    onChange={handleFormPayloadChange}
-                    placeholder={ConvertToTitleCase(key)}
-                    required={value.isRequired}
-                  />
-                ) : value.type === "textarea" ? (
-                  <textarea
-                    className="w-full"
-                    type={value.type}
-                    name={name}
-                    value={value.value}
-                    onChange={handleFormPayloadChange}
-                    placeholder={ConvertToTitleCase(key)}
-                    required={value.isRequired}
-                  />
-                ) : value.type === "checkbox" ? (
-                  <input
-                    type="checkbox"
-                    name={key}
-                    checked={value.value}
-                    onChange={handleFormPayloadChange}
-                  />
-                ) : value.type === "dropdown" ? (
-                  <select
-                    className="w-full"
-                    name={key}
-                    value={value.value}
-                    onChange={handleFormPayloadChange}
-                  >
-                    {value?.options?.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                ) : value.type === "radio" ? (
-                  <div className="w-full">
-                    {value.options.map((option, index) => (
-                      <label key={index} className="pr-2 py-1">
-                        <input
-                          type="radio"
-                          name={key}
-                          value={option}
-                          checked={value.value === option}
-                          onChange={handleFormPayloadChange}
-                        />
-                        {option}
-                      </label>
-                    ))}
-                  </div>
-                ) : value.type === "slider" ? (
-                  <div className="flex items-center justify-between w-full">
-                    <input
-                      className="w-full"
-                      type="range"
-                      name={key}
-                      value={value.value}
-                      onChange={handleFormPayloadChange}
-                      min={value.min}
-                      max={value.max}
-                      step={value.step || 1}
-                      required={value.isRequired}
-                    />
-                    <span className="ml-2">
-                      {parseFloat(value.value).toFixed(2)}
-                    </span>
-                  </div>
-                ) : value.type === "number" ? (
-                  <input
-                    type="number"
-                    name={key}
-                    value={value.value}
-                    onChange={handleFormPayloadChange}
-                    min={value.min}
-                    max={value.max}
-                    required={value.isRequired}
-                  />
-                ) : (
-                  ""
-                )}
-              </div>
-            </div>
-          );
-        }
-      })}
+        // if (
+        // (showAdvancedOpt ? value.isAdvanceoption : !value.isAdvanceoption) &&
+        // !value.hide
+        // ) {
+        <Fragment key={key}>
+          <>
+            {(showAdvancedOpt
+              ? value.isAdvanceoption
+              : !value.isAdvanceoption) && !value.hide ? (
+              <EachInputs
+                // key={key}
+                payloadkey={key}
+                value={value}
+                handleFormPayloadChange={handleFormPayloadChange}
+              />
+            ) : (
+              ""
+            )}
+          </>
+        </Fragment>
+        // }
+      ))}
     </>
   );
 }
 
-function ShowImage({ result, loading, submissionQueue }) {
-  const width = 300;
+function ShowImage({ imageWidth, result, setResult }) {
+  // const width = 300;
+  const handleDeleteImage = (image) => {
+    const images = JSON.parse(localStorage.getItem(localStoragName)) || [];
+    const index = images.indexOf(image);
+    if (index !== -1) {
+      images.splice(index, 1);
+      localStorage.setItem(localStoragName, JSON.stringify(images));
+      setResult(images);
+    }
+  };
   return (
     <>
-      <div className="flex flex-wrap">
-        {loading && (
-          <EmptyImageBox
-            text={"generating (" + (submissionQueue.length + 1) + ")..."}
-            width={width}
-          />
-        )}
+      <div className="flex flex-wrap items-start justify-start">
         {result?.length ? (
           <>
             {result.map((imageUrl) => (
-              <div key={imageUrl} className="m-1">
-                <img src={imageUrl} alt="Not found" width={width} />
+              <div key={imageUrl} className="m-1 relative group h-fit">
+                <img src={imageUrl} alt="Not found" width={imageWidth} />
+                <button
+                  className="absolute top-0 right-0 py-1 px-2.5 m-1 transition duration-300 ease-in-out bg-[#1f1f1f] opacity-0 group-hover:opacity-100 rounded flex items-center justify-center"
+                  onClick={() => handleDeleteImage(imageUrl)}
+                >
+                  x
+                </button>
               </div>
             ))}
           </>
         ) : (
-          <>
-            {!loading && (
-              <EmptyImageBox text="No image generated" width={width} />
-            )}
-          </>
+          <EmptyImageBox text="No image generated" width={imageWidth} />
         )}
       </div>
     </>
@@ -312,8 +308,8 @@ function ShowImage({ result, loading, submissionQueue }) {
 function EmptyImageBox({ text, width }) {
   return (
     <div
-      className={`w-[${width}px] border border-solid border-gray-400 flex items-center justify-center m-1`}
-      style={{ height: width + "px" }}
+      className={`w-[${width}px] border border-solid border-gray-700 items-center justify-center m-1 h-inherit w-full flex py-2`}
+      // style={{ height: width + "px" }}
     >
       {text}
     </div>
