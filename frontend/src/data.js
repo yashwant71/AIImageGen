@@ -31,6 +31,10 @@ export const fnIndexAndTriggerIdMapper = {
     fn_index: 2,
     trigger_id: 5,
   },
+  // "prodia/fast-stable-diffusion": {
+  //   fn_index: 0,
+  //   trigger_id: 15,
+  // },
 };
 
 //"Aigradimages"

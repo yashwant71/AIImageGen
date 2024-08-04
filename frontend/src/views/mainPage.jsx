@@ -27,6 +27,8 @@ const MainPage = () => {
     "prodia/sdxl-stable-diffusion-xl",
     "Akimitsujiro/Stable-Diffusion-XL",
     "prithivMLmods/EPIC-REALISM",
+    // "KingNish/OpenGPT-4o" // todo
+    // "prodia/fast-stable-diffusion", // doesnt seem to work , api doesnt succed
     // "cagliostrolab/animagine-xl-3.1",
     // "gokaygokay/PonyRealism"
     // "prithivMLmods/Text-To-Image"
@@ -195,7 +197,7 @@ const MainPage = () => {
                   const value = parseInt(e.target.value);
                   setimageWidth(value * 50);
                 }}
-                min={1}
+                min={2}
                 max={10}
                 step={1}
               />
