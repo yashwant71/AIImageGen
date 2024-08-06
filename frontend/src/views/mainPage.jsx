@@ -15,7 +15,7 @@ import { saveAs } from "file-saver";
 /* eslint-disable react/prop-types */
 const localStoragName = "Aigradimages";
 const MainPage = () => {
-  const submissionQueueLimit = 100;
+  const submissionQueueLimit = 3;
   const [selectedApi, setselectedApi] = useState("mukaist/Midjourney");
   // eslint-disable-next-line no-unused-vars
   const [apis, setApis] = useState([
@@ -27,6 +27,8 @@ const MainPage = () => {
     "prodia/sdxl-stable-diffusion-xl",
     "Akimitsujiro/Stable-Diffusion-XL",
     "prithivMLmods/EPIC-REALISM",
+    "John6666/votepurchase-multiple-model", // great multimodel
+
     // "cagliostrolab/animagine-xl-3.1",
     // "gokaygokay/PonyRealism"
     // "prithivMLmods/Text-To-Image"
@@ -81,8 +83,12 @@ const MainPage = () => {
         alert("some error occured, Try with different Api!!");
       }
     } catch (error) {
-      alert(error.message);
-      console.error(error.message);
+      let errmessage = "unexpected issue occured, try again later";
+      if (error?.response?.data?.message) {
+        errmessage = error.response.data.message;
+      }
+      alert(errmessage);
+      console.error(errmessage);
     } finally {
       setLoading(false);
     }
@@ -92,7 +98,7 @@ const MainPage = () => {
     e.preventDefault();
 
     if (submissionQueue.length >= submissionQueueLimit) {
-      alert("Daddy chiill ! take a breather.");
+      alert("Slow down!! take a breather.");
       return;
     }
     // Format the payload before adding to the submission queue

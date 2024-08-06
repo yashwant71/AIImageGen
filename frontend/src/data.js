@@ -31,6 +31,10 @@ export const fnIndexAndTriggerIdMapper = {
     fn_index: 2,
     trigger_id: 5,
   },
+  "John6666/votepurchase-multiple-model": {
+    fn_index: 1,
+    trigger_id: 5,
+  },
 };
 
 //"Aigradimages"

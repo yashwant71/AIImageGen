@@ -52,11 +52,31 @@ app.post("/api/gradio", async (req, res) => {
           res.json(eventData?.output?.data?.[0]?.[0]?.image?.url);
         } else if (eventData?.output?.data?.[0]?.url) {
           // for prodia/sdxl-stable-diffusion-xl
+          console.log("output::::", eventData?.output?.data?.[0]);
           res.json(eventData?.output?.data?.[0]?.url);
+        } else if (eventData?.output?.error) {
+          const errorMessage = eventData.output.error;  
+          if (errorMessage.includes("No GPU")) {
+            res.status(402).json({
+              message: "Server not available, try again later",
+            });
+          } else {
+            res.status(402).json({
+              message:
+                "limit exceeded, use a vpn (change the location of vpn if already using one)",
+            });
+          }
+          console.log(eventData?.output?.error);
         } else {
           res.status(500).json({ message: "not found the url " });
         }
-        console.log("eveedata", eventData);
+      } else if (eventData.msg === "heartbeat" && eventData.event_id === null) {
+        console.log(eventData);
+        // return res.status(402).json({
+        //   message: "some issue occured with the model , try again",
+        // });
+      } else {
+        console.log(eventData);
       }
     };
 
