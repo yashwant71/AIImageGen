@@ -7,6 +7,8 @@ const port = 3000;
 app.use(bodyParser.json());
 const axios = require("axios");
 const EventSource = require("eventsource");
+var ProxyVerifier = require("proxy-verifier");
+const HttpsProxyAgent = require("https-proxy-agent");
 
 // app.use(
 //   cors({
@@ -15,6 +17,62 @@ const EventSource = require("eventsource");
 //   })
 // );
 
+// Function to get proxies from the API
+async function getProxies() {
+  try {
+    const response = await axios.get(
+      "https://api.proxyscrape.com/v3/free-proxy-list/get?request=displayproxies&protocol=http&proxy_format=protocolipport&format=text&timeout=1000"
+    );
+    const proxies = response.data.split("\n");
+    return proxies;
+  } catch (error) {
+    console.error("Error getting proxies:", error);
+    return [];
+  }
+}
+
+async function testProxy(proxy) {
+  try {
+    const proxyProtocol = proxy.split("://")[0];
+    const proxyIp = proxy.split("://")[1].split(":")[0];
+    const proxyPort = proxy.split("://")[1].split(":")[1];
+
+    const proxyObj = {
+      ipAddress: proxyIp,
+      port: proxyPort,
+      protocol: proxyProtocol,
+    };
+
+    await new Promise((resolve, reject) => {
+      ProxyVerifier.testProtocol(
+        proxyObj,
+        { timeout: 1000 },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        }
+      );
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error testing proxy:", error);
+    return false;
+  }
+}
+// Function to get a working proxy
+async function getWorkingProxy() {
+  const proxies = await getProxies();
+  for (const proxy of proxies) {
+    if (await testProxy(proxy)) {
+      return proxy;
+    }
+  }
+  return null;
+}
 app.post("/api/gradio", async (req, res) => {
   const input = req.body;
   // Math.random().toString(36).substring(2)
@@ -26,20 +84,33 @@ app.post("/api/gradio", async (req, res) => {
     trigger_id: input.trigger_id || 6,
     session_hash: sessionHash,
   };
+
   try {
     // Step 1: Make the initial POST request to join the queue
+
     await axios.post(
       `https://${input.selectedApi}.hf.space/queue/join?`,
       payloadForapi,
-      { timeout: 12000000 }
+      {
+        timeout: 12000000,
+      }
     );
-    // const sessionHash = joinQueueResponse.data.session_hash;
 
+    const workingProxy = await getWorkingProxy();
+    console.log("working", workingProxy);
+    const proxyAgent = new HttpsProxyAgent(workingProxy);
     // Step 2: Setup event stream to listen for process completion
-    const eventSource = new EventSource(
-      `https://${input.selectedApi}.hf.space/queue/data?session_hash=${sessionHash}`
-    );
 
+    const eventSourceOptions = {
+      https: {
+        rejectUnauthorized: false,
+      },
+      agent: proxyAgent,
+    };
+    const eventSource = new EventSource(
+      `https://${input.selectedApi}.hf.space/queue/data?session_hash=${sessionHash}`,
+      eventSourceOptions
+    );
     eventSource.onmessage = (event) => {
       const eventData = JSON.parse(event.data);
       if (eventData.msg === "process_completed") {
@@ -55,7 +126,7 @@ app.post("/api/gradio", async (req, res) => {
           console.log("output::::", eventData?.output?.data?.[0]);
           res.json(eventData?.output?.data?.[0]?.url);
         } else if (eventData?.output?.error) {
-          const errorMessage = eventData.output.error;  
+          const errorMessage = eventData.output.error;
           if (errorMessage.includes("No GPU")) {
             res.status(402).json({
               message: "Server not available, try again later",
@@ -70,11 +141,6 @@ app.post("/api/gradio", async (req, res) => {
         } else {
           res.status(500).json({ message: "not found the url " });
         }
-      } else if (eventData.msg === "heartbeat" && eventData.event_id === null) {
-        console.log(eventData);
-        // return res.status(402).json({
-        //   message: "some issue occured with the model , try again",
-        // });
       } else {
         console.log(eventData);
       }
